@@ -20,7 +20,9 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
                 selectedItemsLabel: '@',
                 templateUrl: '@',
                 itemValueKey: '@',
-                itemViewValueKey: '@'
+                itemViewValueKey: '@',
+                itemUniqueKey: '@',
+                itemClearSelected: '@'
             },
             controllerAs: 'viewModel',
             controller: ['$attrs', '$timeout', '$scope', function ($attrs, $timeout, $scope) {
@@ -40,6 +42,8 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
                     controller.templateUrl = valueOrDefault(controller.templateUrl, undefined);
                     controller.itemValueKey = valueOrDefault(controller.itemValueKey, undefined);
                     controller.itemViewValueKey = valueOrDefault(controller.itemViewValueKey, undefined);
+                    controller.itemUniqueKey = valueOrDefault(controller.itemUniqueKey, undefined);
+                    controller.itemClearSelected = valueOrDefault(controller.itemViewValueKey, false);
                 });
 
                 // set the default values of the passed in attributes
