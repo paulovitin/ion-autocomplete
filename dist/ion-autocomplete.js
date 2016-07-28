@@ -28,9 +28,8 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
                 cancelLabel: '@',
                 selectItemsLabel: '@',
                 selectedItemsLabel: '@',
-                templateUrl: '@',
-                itemValueKey: '@',
-                itemViewValueKey: '@'
+                itemUniqueKey: '@',
+                itemClearSelected: '@'
             },
             controllerAs: 'viewModel',
             controller: ['$attrs', '$timeout', '$scope', function ($attrs, $timeout, $scope) {
@@ -47,14 +46,16 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
                     controller.cancelLabel = valueOrDefault(controller.cancelLabel, 'Done');
                     controller.selectItemsLabel = valueOrDefault(controller.selectItemsLabel, "Select an item...");
                     controller.selectedItemsLabel = valueOrDefault(controller.selectedItemsLabel, $interpolate("Selected items{{maxSelectedItems ? ' (max. ' + maxSelectedItems + ')' : ''}}:")(controller));
-                    controller.templateUrl = valueOrDefault(controller.templateUrl, undefined);
-                    controller.itemValueKey = valueOrDefault(controller.itemValueKey, undefined);
-                    controller.itemViewValueKey = valueOrDefault(controller.itemViewValueKey, undefined);
+                    controller.itemUniqueKey = valueOrDefault(controller.itemUniqueKey, undefined);
+                    controller.itemClearSelected = valueOrDefault(controller.itemClearSelected, false);
                 });
 
                 // set the default values of the passed in attributes
                 this.maxSelectedItems = valueOrDefault($attrs.maxSelectedItems, undefined);
+                this.templateUrl = valueOrDefault($attrs.templateUrl, undefined);
                 this.itemsMethodValueKey = valueOrDefault($attrs.itemsMethodValueKey, undefined);
+                this.itemValueKey = valueOrDefault($attrs.itemValueKey, undefined);
+                this.itemViewValueKey = valueOrDefault($attrs.itemViewValueKey, undefined);
                 this.componentId = valueOrDefault($attrs.componentId, undefined);
                 this.loadingIcon = valueOrDefault($attrs.loadingIcon, undefined);
                 this.manageExternally = valueOrDefault($attrs.manageExternally, "false");
@@ -104,7 +105,7 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
                     '<i class="icon ion-trash-a" style="cursor:pointer" ng-click="viewModel.removeItem(0)"></i>',
                     '</ion-item>',
                     '<ion-item class="item-divider" ng-if="viewModel.searchItems.length > 0">{{viewModel.selectItemsLabel}}</ion-item>',
-                    '<ion-item ng-repeat="item in viewModel.searchItems track by $index" item-height="55px" item-width="100%" ng-click="viewModel.selectItem(item)" class="item-text-wrap">',
+                    '<ion-item ng-repeat="item in viewModel.searchItems" item-height="55px" item-width="100%" ng-click="viewModel.selectItem(item)" class="item-text-wrap">',
                     '{{viewModel.getItemValue(item, viewModel.itemViewValueKey)}}',
                     '</ion-item>',
                     '</ion-content>',
@@ -153,6 +154,10 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
 
                     // function which selects the item, hides the search container and the ionic backdrop if it has not maximum selected items attribute set
                     ionAutocompleteController.selectItem = function (item) {
+                        
+                        if (itemExists(item)) {
+                            return;
+                        }
 
                         // clear the search query when an item is selected
                         ionAutocompleteController.searchQuery = undefined;
@@ -163,6 +168,8 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
                             ionAutocompleteController.maxSelectedItems == ionAutocompleteController.selectedItems.length) {
                             return;
                         }
+
+
 
                         // store the selected items
                         if (!isKeyValueInObjectArray(ionAutocompleteController.selectedItems,
@@ -278,12 +285,12 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
 
                                 // force the collection repeat to redraw itself as there were issues when the first items were added
                                 $ionicScrollDelegate.resize();
+
+                                // hide the loading icon
+                                ionAutocompleteController.showLoadingIcon = false;
                             }, function (error) {
                                 // reject the error because we do not handle the error here
                                 return $q.reject(error);
-                            }).finally(function () {
-                                // hide the loading icon
-                                ionAutocompleteController.showLoadingIcon = false;
                             });
                         }
                     };
@@ -327,6 +334,23 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
                         $ionicBackdrop.release();
                         scope.$deregisterBackButton && scope.$deregisterBackButton();
                         searchContainerDisplayed = false;
+                    };
+
+                    var itemExists = function (item) {
+                        var has = false,
+                            i = 0,
+                            uniqueKey = ionAutocompleteController.itemUniqueKey,
+                            skills = ionAutocompleteController.selectedItems,
+                            skillLen = skills.length;
+
+                        for (;i < skillLen; i++) {
+                            if (skills[i][uniqueKey] === item[uniqueKey]) {
+                                has = true;
+                                break;
+                            }
+                        }
+
+                        return has;
                     };
 
                     // object to store if the user moved the finger to prevent opening the modal
@@ -452,7 +476,6 @@ angular.module('ion-autocomplete', []).directive('ionAutocomplete', [
 
                     // remove the component from the dom when scope is getting destroyed
                     scope.$on('$destroy', function () {
-                        $ionicBackdrop.release();
 
                         // angular takes care of cleaning all $watch's and listeners, but we still need to remove the modal
                         searchInputElement.remove();
